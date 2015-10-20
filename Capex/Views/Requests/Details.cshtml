@@ -1,0 +1,86 @@
+﻿@model Capex.Models.Request
+
+@{
+    ViewBag.Title = "Details";
+}
+
+<h2 style="text-align:center;">Details</h2>
+
+<div>
+    <h4 style="text-align:center;">Request</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        <dt>
+            @Html.DisplayNameFor(model => model.RequestID)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.RequestID)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.UserID)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.UserID)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.User.ManagerID)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.User.ManagerID)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.CreationDate)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.CreationDate)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.Description)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.Description)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.Value)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.Value)
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.Currency)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.Currency)
+        </dd>         
+        <dt>
+            @Html.DisplayNameFor(model => model.LongDescription)
+        </dt>
+
+        <dd>
+            @Html.TextAreaFor(model => model.LongDescription, 5, 100, htmlAttributes: new {style = "width: 100%; max-width: 100%;",  @readonly = true})
+        </dd>
+
+        <dt>
+            @Html.DisplayNameFor(model => model.State)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.State)
+        </dd>
+    </dl>   
+</div>
+<p>
+    @Html.ActionLink("Редактировать", "Edit", new { id = Model.RequestID }) |
+    @Html.ActionLink("Вернуться к списку", "Index")
+</p>
