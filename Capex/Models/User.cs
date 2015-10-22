@@ -15,6 +15,9 @@ namespace Capex.Models
         [Display(Name = "Роль")]
         public UserRole Role { get; set; }
 
+        [Display(Name = "Пользователь")]
+        public string FullName { get; set; }
+
         [Display(Name = "Подразделение")]
         public Unit Unit { get; set; }
 
@@ -30,10 +33,10 @@ namespace Capex.Models
         [Display(Name = "Менеджер")]
         Manager,
 
-        [Display(Name = "Финансовый директор")]
-        FinancialManager,
-
         [Display(Name = "CFOMedicove")]
-        CFOMedicove
+        CFOMedicove,
+
+        [Display(Name = "Финансовый директор")]
+        FinancialManager
     }
 }

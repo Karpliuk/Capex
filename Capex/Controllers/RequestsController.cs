@@ -17,64 +17,57 @@ namespace Capex.Models
         // GET: Requests
         public ActionResult Index(string SortRequest)
         {
-            ViewBag.NameSortParm = String.IsNullOrEmpty(SortRequest) ? "name_desc" : "";
-            ViewBag.DateSortParm = SortRequest == "Date" ? "date_desc" : "Date";
-            ViewBag.ValueSortParm = SortRequest == "Value" ? "value_desc" : "Value";
+            // сортировка
+            ViewBag.NameSortParm = SortRequest == "name_asc" ? "name_desc" : "name_asc";
+            ViewBag.DateSortParm = SortRequest == "date_asc" ? "date_desc" : "date_asc";
+            ViewBag.ValueSortParm = SortRequest == "value_asc" ? "value_desc" : "value_asc";
 
+
+            // проверяем есть ли такой пользователь в  бд таблице USER
+            if(((from c in db.Users where c.UserID == User.Identity.Name select c.FullName).FirstOrDefault()) == null)
+            {
+                return RedirectToAction("Error");
+            }
 
             UserRole role = (from c in db.Users
                              where c.UserID == User.Identity.Name
                              select c.Role).FirstOrDefault();
-
-             var requests = (from Rq in db.Requests
+         
+            // получаем заявки текущего пользователя
+            var requests = (from Rq in db.Requests
                             where Rq.UserID == User.Identity.Name
-                             select Rq).Union
-                            (from R in db.Requests
+                            select Rq).Union
+                           (from R in db.Requests
                             where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.UserID)
                             select R);
 
-
-            var setRequests = (from d in requests select d.State).Distinct();
-            List<SelectListItem> itemsRequests = new List<SelectListItem>();
-            foreach (var s in setRequests)
+            if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove)
             {
-                itemsRequests.Add(new SelectListItem
-                {
-                    Text = s.ToString(),
-                    Value = s.ToString()
-                });
+                // получаем все заявки
+                requests = (from R in db.Requests select R);
             }
-            ViewBag.State = itemsRequests;
 
 
-            var users = (from d in db.Users select d.Unit).Distinct();
-            List<SelectListItem> itemsUsers = new List<SelectListItem>();
-            foreach (var s in users)
-            {
-                itemsUsers.Add(new SelectListItem
-                {
-                    Text = s.ToString(),
-                    Value = s.ToString()
-                });
-            }
-            ViewBag.Unit = itemsUsers;
+            SetUnitAndState();
 
             if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove)
             {
                 var requests_ = (from Rq in db.Requests select Rq);
-                //сортировки
                 switch (SortRequest)
                 {
                     case "name_desc":
                         requests_ = requests_.OrderByDescending(s => s.RequestID);
                         break;
-                    case "Date":
+                    case "name_asc":
+                        requests_ = requests_.OrderBy(s => s.RequestID);
+                        break;
+                    case "date_asc":
                         requests_ = requests_.OrderBy(s => s.CreationDate);
                         break;
                     case "date_desc":
                         requests_ = requests_.OrderByDescending(s => s.CreationDate);
                         break;
-                    case "Value":
+                    case "value_asc":
                         requests_ = requests_.OrderBy(s => s.Value);
                         break;
                     case "value_desc":
@@ -87,19 +80,21 @@ namespace Capex.Models
                 return View(requests_.ToList());
             }
 
-            //сортировки
             switch (SortRequest)
             {
                 case "name_desc":
                     requests = requests.OrderByDescending(s => s.RequestID);
                     break;
-                case "Date":
+                case "name_asc":
+                    requests = requests.OrderBy(s => s.RequestID);
+                    break;
+                case "date_asc":
                     requests = requests.OrderBy(s => s.CreationDate);
                     break;
                 case "date_desc":
                     requests = requests.OrderByDescending(s => s.CreationDate);
                     break;
-                case "Value":
+                case "value_asc":
                     requests = requests.OrderBy(s => s.Value);
                     break;
                 case "value_desc":
@@ -114,11 +109,16 @@ namespace Capex.Models
         }
 
         [HttpPost]
-        public ActionResult Index(RequestState State, Unit Unit, DateTime? StartCreationDate, DateTime? EndCreationDate,  string SortRequest)
+        public ActionResult Index(RequestState? State, Unit? Unit, DateTime? StartCreationDate, DateTime? EndCreationDate,  string SortRequest)
         {
-            // SYNEVO\a.titarenko
-            // SYNEVO\Alexander.Karpliuk
-            // SYNEVO\b.veremiy
+            //if(AllRequesrts)
+            //{
+            //    return RedirectToAction("Index");
+            //}
+
+            UserRole role = (from c in db.Users
+                             where c.UserID == User.Identity.Name
+                             select c.Role).FirstOrDefault();
 
             var rq = (from Rq in db.Requests
                             where Rq.UserID == User.Identity.Name
@@ -126,41 +126,72 @@ namespace Capex.Models
                            (from R in db.Requests
                             where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.UserID)
                             select R);
-
-
-            var setRequests = (from d in rq select d.State).Distinct();
-            List<SelectListItem> itemsRequests = new List<SelectListItem>();
-            foreach (var s in setRequests)
-            {
-                itemsRequests.Add(new SelectListItem
-                {
-                    Text = s.ToString(),
-                    Value = s.ToString()
-                });
-            }
-            ViewBag.State = itemsRequests;
-
-
-            var users = (from d in db.Users select d.Unit).Distinct();
-            List<SelectListItem> itemsUsers = new List<SelectListItem>();
-            foreach (var s in users)
-            {
-                itemsUsers.Add(new SelectListItem
-                {
-                    Text = s.ToString(),
-                    Value = s.ToString()
-                });
-            }
-            ViewBag.Unit = itemsUsers;
-
-            UserRole role = (from c in db.Users
-                             where c.UserID == User.Identity.Name
-                             select c.Role).FirstOrDefault();
-
             if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove)
             {
-                var requests_ = (from Rq in db.Requests select Rq);                
-                return View(requests_.ToList());
+                rq = (from R in db.Requests select R);
+            }
+
+            SetUnitAndState();
+
+            List<Request> filteredList;
+            if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove)
+            {
+                var requests_ = (from Rq in db.Requests select Rq).ToList();
+                filteredList = new List<Request>();
+
+                foreach (var request in requests_)
+                {
+                    if ((StartCreationDate != null) && (EndCreationDate != null))
+                    {
+                        if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)) && (request.State == State))
+                        {
+                            if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
+                            {
+                                filteredList.Add(request);
+                            }
+                        }
+                    }
+                    else
+                    if (StartCreationDate != null)
+                    {
+                        if ((request.CreationDate.Date >= StartCreationDate) && (request.State == State))
+                        {
+                            if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
+                            {
+                                filteredList.Add(request);
+                            }
+                        }
+                    }
+                    else
+                    if (EndCreationDate != null)
+                    {
+                        if ((request.CreationDate.Date <= EndCreationDate) && (request.State == State))
+                        {
+                            if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
+                            {
+                                filteredList.Add(request);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (request.State == State)
+                        {
+                            if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault()) 
+                            {
+                                filteredList.Add(request);
+                            }
+                        }
+                    }
+                }
+
+                //List<Request> filteredSortList = null;
+                //foreach (var filter in filteredList)
+                //{
+                //    filteredSortList.Add((from R in db.Requests where R.RequestID == filter.RequestID select R).FirstOrDefault());
+                //}
+
+                return View(filteredList.ToList());
             }
 
             // получить список заявок 
@@ -171,8 +202,7 @@ namespace Capex.Models
                             where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.UserID)
                             select R).ToList();
 
-            List<Request> filteredList = new List<Request>();
-
+            filteredList = new List<Request>();
             foreach (var request in requests)
             {
                 if((StartCreationDate != null) && (EndCreationDate != null))
@@ -221,6 +251,11 @@ namespace Capex.Models
             return View(filteredList.ToList());
         }
 
+        [HttpPost]
+        public ActionResult ShowAll()
+        {
+            return RedirectToAction("Index");
+        }
 
         // GET: Requests/Details/5
         public ActionResult Details(int? id)
@@ -257,7 +292,29 @@ namespace Capex.Models
                     // некоторые значения дефолтные
                     request.UserID = User.Identity.Name;
                     request.CreationDate = DateTime.Now;
-                    request.State = 0; // "Created"
+                    // получаем роль текущего пользователя
+                    UserRole role = (from c in db.Users
+                                     where c.UserID == User.Identity.Name
+                                     select c.Role).FirstOrDefault();
+                    if(role == UserRole.User)
+                    {
+                        request.State = RequestState.Created; // "Created"
+                    }
+                    else
+                    if(role == UserRole.Manager)
+                    {
+                        request.State = RequestState.ApprovedByManager;
+                    }
+                    else
+                    if (role == UserRole.CFOMedicove)
+                    {
+                        request.State = RequestState.ApprovedByMedicover;
+                    }
+                    else
+                    {
+                        request.State = RequestState.Created; // "Created"
+                    }                        
+
                     request.Value = decimal.Round(request.Value, 2); // округлим до 2 знака после запятой
                     db.Requests.Add(request);
                     db.SaveChanges();
@@ -329,23 +386,23 @@ namespace Capex.Models
         {
             try
             {
-                int role;
+                UserRole role;
                 if (request.UserID == User.Identity.Name)
                 {
-                    role = 0;
+                    role = UserRole.User;
                 }
                 else
                 {
-                    role = (int)(from c in db.Users
-                                 where c.UserID == User.Identity.Name
-                                 select c.Role).FirstOrDefault();
+                    role = (from c in db.Users
+                            where c.UserID == User.Identity.Name
+                            select c.Role).FirstOrDefault();
                 }
 
                 switch (role)
                 {
-                    case 0:
+                    case Models.UserRole.User:
                         List<SelectListItem> UserRole = new List<SelectListItem>();
-                        if ((int)request.State == 3)
+                        if (request.State == RequestState.ApprovedByMedicover)
                         {
                             UserRole.Add(new SelectListItem
                             {
@@ -354,12 +411,12 @@ namespace Capex.Models
                             });
                             UserRole.Add(new SelectListItem
                             {
-                                Text = "Finalized",
-                                Value = "Finalized"
+                                Text = RequestState.Finalized.ToString(),
+                                Value = RequestState.Finalized.ToString()
                             });
                         }
                         else
-                        if ((int)request.State == 2)
+                        if (request.State == RequestState.ApprovedByManager)
                         {
                             UserRole.Add(new SelectListItem
                             {
@@ -368,7 +425,7 @@ namespace Capex.Models
                             });
                         }
                         else
-                        if ((int)request.State == 0)
+                        if (request.State == RequestState.Created)
                         {
 
                             UserRole.Add(new SelectListItem
@@ -378,8 +435,8 @@ namespace Capex.Models
                             });
                             UserRole.Add(new SelectListItem
                             {
-                                Text = "Cancelled",
-                                Value = "Cancelled"
+                                Text = RequestState.Cancelled.ToString(),
+                                Value = RequestState.Cancelled.ToString()
                             });
                         }
                         else
@@ -388,14 +445,19 @@ namespace Capex.Models
                             {
                                 Text = request.State.ToString(),
                                 Value = request.State.ToString()
+                            });
+                            UserRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.Created.ToString(),
+                                Value = RequestState.Created.ToString()
                             });
                         }
 
                         ViewBag.State = UserRole;
                         break;
-                    case 1:
+                    case Models.UserRole.Manager:
                         List<SelectListItem> ManagerRole = new List<SelectListItem>();
-                        if ((int)request.State == 0)
+                        if (request.State == RequestState.Created)
                         {
                             ManagerRole.Add(new SelectListItem
                             {
@@ -404,13 +466,13 @@ namespace Capex.Models
                             });
                             ManagerRole.Add(new SelectListItem
                             {
-                                Text = "ApprovedByManager",
-                                Value = "ApprovedByManager"
+                                Text = RequestState.ApprovedByManager.ToString(),
+                                Value = RequestState.ApprovedByManager.ToString()
                             });
                             ManagerRole.Add(new SelectListItem
                             {
-                                Text = "Cancelled",
-                                Value = "Cancelled"
+                                Text = RequestState.Cancelled.ToString(),
+                                Value = RequestState.Cancelled.ToString()
                             });
                         }
                         else
@@ -424,48 +486,9 @@ namespace Capex.Models
 
                         ViewBag.State = ManagerRole;
                         break;
-                    case 2:
-                        List<SelectListItem> FinancialManagerRole = new List<SelectListItem>();
-                        if ((int)request.State == 3)
-                        {
-                            FinancialManagerRole.Add(new SelectListItem
-                            {
-                                Text = request.State.ToString(),
-                                Value = request.State.ToString()
-                            });
-                            FinancialManagerRole.Add(new SelectListItem
-                            {
-                                Text = "Finalized",
-                                Value = "Finalized"
-                            });
-                        }
-                        else
-                        if ((int)request.State != 1)
-                        {
-                            FinancialManagerRole.Add(new SelectListItem
-                            {
-                                Text = request.State.ToString(),
-                                Value = request.State.ToString()
-                            });
-                            FinancialManagerRole.Add(new SelectListItem
-                            {
-                                Text = "Cancelled",
-                                Value = "Cancelled"
-                            });
-                        }
-                        else
-                        {
-                            FinancialManagerRole.Add(new SelectListItem
-                            {
-                                Text = request.State.ToString(),
-                                Value = request.State.ToString()
-                            });
-                        }
-                        ViewBag.State = FinancialManagerRole;
-                        break;
-                    case 3:
+                    case Models.UserRole.CFOMedicove:
                         List<SelectListItem> CFOMedicoveRole = new List<SelectListItem>();
-                        if ((int)request.State == 2)
+                        if (request.State == RequestState.ApprovedByManager)
                         {
                             CFOMedicoveRole.Add(new SelectListItem
                             {
@@ -475,12 +498,17 @@ namespace Capex.Models
 
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = "ApprovedByMedicover",
-                                Value = "ApprovedByMedicover"
+                                Text = RequestState.ApprovedByMedicover.ToString(),
+                                Value = RequestState.ApprovedByMedicover.ToString()
+                            });
+                            CFOMedicoveRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.Cancelled.ToString(),
+                                Value = RequestState.Cancelled.ToString()
                             });
                         }
                         else
-                        if ((int)request.State != 1)
+                        if (request.State != RequestState.Cancelled)
                         {
                             CFOMedicoveRole.Add(new SelectListItem
                             {
@@ -489,8 +517,8 @@ namespace Capex.Models
                             });
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = "Cancelled",
-                                Value = "Cancelled"
+                                Text = RequestState.Cancelled.ToString(),
+                                Value = RequestState.Cancelled.ToString()
                             });
                         }
                         else
@@ -503,10 +531,174 @@ namespace Capex.Models
                         }
                         ViewBag.State = CFOMedicoveRole;
                         break;
+                    case Models.UserRole.FinancialManager:
+                        List<SelectListItem> FinancialManagerRole = new List<SelectListItem>();
+                        if (request.State == RequestState.Created)
+                        {
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = request.State.ToString(),
+                                Value = request.State.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.ApprovedByManager.ToString(),
+                                Value = RequestState.ApprovedByManager.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.Cancelled.ToString(),
+                                Value = RequestState.Cancelled.ToString()
+                            });
+                        }
+                        else
+                        if (request.State == RequestState.ApprovedByManager)
+                        {
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = request.State.ToString(),
+                                Value = request.State.ToString()
+                            });
+
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.ApprovedByMedicover.ToString(),
+                                Value = RequestState.ApprovedByMedicover.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.Cancelled.ToString(),
+                                Value = RequestState.Cancelled.ToString()
+                            });
+                        }
+                        else
+                        if (request.State == RequestState.ApprovedByMedicover)
+                        {
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = request.State.ToString(),
+                                Value = request.State.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.Finalized.ToString(),
+                                Value = RequestState.Finalized.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.Cancelled.ToString(),
+                                Value = RequestState.Cancelled.ToString()
+                            });
+                        }
+                        else
+                        {
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = request.State.ToString(),
+                                Value = request.State.ToString()
+                            });
+                        }
+                        ViewBag.State = FinancialManagerRole;
+
+                        // как в ТЗ
+                        //List<SelectListItem> FinancialManagerRole = new List<SelectListItem>();
+                        //if (request.State == RequestState.ApprovedByMedicover)
+                        //{
+                        //    FinancialManagerRole.Add(new SelectListItem
+                        //    {
+                        //        Text = request.State.ToString(),
+                        //        Value = request.State.ToString()
+                        //    });
+                        //    FinancialManagerRole.Add(new SelectListItem
+                        //    {
+                        //        Text = RequestState.Finalized.ToString(),
+                        //        Value = RequestState.Finalized.ToString()
+                        //    });
+                        //    FinancialManagerRole.Add(new SelectListItem
+                        //    {
+                        //        Text = RequestState.Cancelled.ToString(),
+                        //        Value = RequestState.Cancelled.ToString()
+                        //    });
+                        //}
+                        //else
+                        //if (request.State != RequestState.Cancelled)
+                        //{
+                        //    FinancialManagerRole.Add(new SelectListItem
+                        //    {
+                        //        Text = request.State.ToString(),
+                        //        Value = request.State.ToString()
+                        //    });
+                        //    FinancialManagerRole.Add(new SelectListItem
+                        //    {
+                        //        Text = RequestState.Cancelled.ToString(),
+                        //        Value = RequestState.Cancelled.ToString()
+                        //    });
+                        //}
+                        //else
+                        //{
+                        //    FinancialManagerRole.Add(new SelectListItem
+                        //    {
+                        //        Text = request.State.ToString(),
+                        //        Value = request.State.ToString()
+                        //    });
+                        //}
+                        //ViewBag.State = FinancialManagerRole;
+                        break;
                 }
             }
             catch(Exception ex) { }
            
+        }
+
+        private void SetUnitAndState()
+        {
+            // All State
+            List<SelectListItem> itemsRequests = new List<SelectListItem>();
+            itemsRequests.Add(new SelectListItem
+            {
+                Text = RequestState.Created.ToString(),
+                Value = RequestState.Created.ToString()
+            });
+            itemsRequests.Add(new SelectListItem
+            {
+                Text = RequestState.Cancelled.ToString(),
+                Value = RequestState.Cancelled.ToString()
+            });
+            itemsRequests.Add(new SelectListItem
+            {
+                Text = RequestState.ApprovedByManager.ToString(),
+                Value = RequestState.ApprovedByManager.ToString()
+            });
+            itemsRequests.Add(new SelectListItem
+            {
+                Text = RequestState.ApprovedByMedicover.ToString(),
+                Value = RequestState.ApprovedByMedicover.ToString()
+            });
+            itemsRequests.Add(new SelectListItem
+            {
+                Text = RequestState.Finalized.ToString(),
+                Value = RequestState.Finalized.ToString()
+            });
+            ViewBag.State = itemsRequests;
+
+            // All Unit
+            List<SelectListItem> itemsUsers = new List<SelectListItem>();
+            itemsUsers.Add(new SelectListItem
+            {
+                Text = Unit.Украина.ToString(),
+                Value = Unit.Украина.ToString()
+            });
+            itemsUsers.Add(new SelectListItem
+            {
+                Text = Unit.Россия.ToString(),
+                Value = Unit.Россия.ToString()
+            });
+            itemsUsers.Add(new SelectListItem
+            {
+                Text = Unit.Беларусь.ToString(),
+                Value = Unit.Беларусь.ToString()
+            });
+            ViewBag.Unit = itemsUsers;
         }
 
         // GET: Requests/Delete/5
@@ -522,6 +714,12 @@ namespace Capex.Models
                 return HttpNotFound();
             }
             return View(request);
+        }
+        
+
+        public ActionResult Error()
+        {
+            return View("Error");
         }
 
         // POST: Requests/Delete/5

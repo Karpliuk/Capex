@@ -17,12 +17,19 @@
         <dd>
             @Html.DisplayFor(model => model.RequestID)
         </dd>
-        <dt>
+        @*<dt>
             @Html.DisplayNameFor(model => model.UserID)
         </dt>
 
         <dd>
             @Html.DisplayFor(model => model.UserID)
+        </dd>*@
+        <dt>
+            @Html.DisplayNameFor(model => model.User.FullName)
+        </dt>
+
+        <dd>
+            @Html.DisplayFor(model => model.User.FullName)
         </dd>
         <dt>
             @Html.DisplayNameFor(model => model.User.ManagerID)
