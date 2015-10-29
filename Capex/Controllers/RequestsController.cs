@@ -47,7 +47,6 @@ namespace Capex.Models
                 requests = (from R in db.Requests select R);
             }
 
-
             SetUnitAndState();
 
             if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove)
@@ -547,6 +546,16 @@ namespace Capex.Models
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
+                                Text = RequestState.ApprovedByMedicover.ToString(),
+                                Value = RequestState.ApprovedByMedicover.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.Finalized.ToString(),
+                                Value = RequestState.Finalized.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
                                 Text = RequestState.Cancelled.ToString(),
                                 Value = RequestState.Cancelled.ToString()
                             });
@@ -564,6 +573,11 @@ namespace Capex.Models
                             {
                                 Text = RequestState.ApprovedByMedicover.ToString(),
                                 Value = RequestState.ApprovedByMedicover.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.Finalized.ToString(),
+                                Value = RequestState.Finalized.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
