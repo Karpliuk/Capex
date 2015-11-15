@@ -16,7 +16,7 @@ namespace Capex.Models
         public CapexContext()
             : base("CapexDB")
         {
-            Database.SetInitializer(new DropCreateDatabaseIfModelChanges<CapexContext>());
+           // Database.SetInitializer(new DropCreateDatabaseIfModelChanges<CapexContext>());
         }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)

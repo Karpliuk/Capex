@@ -57,6 +57,9 @@
             @Html.DisplayNameFor(model => model.User.FullName)
         </th>
         <th>
+            @Html.DisplayNameFor(model => model.User.Unit)
+        </th>
+        <th>
             @Html.ActionLink("Дата создания", "Index", new { SortRequest = ViewBag.DateSortParm })
         </th>
         <th>
@@ -71,10 +74,12 @@
         @*<th>
                 @Html.DisplayNameFor(model => model.LongDescription)
         </th>*@
-<th>
-    @Html.DisplayNameFor(model => model.State)
-</th>
-<th></th>
+        <th>
+            @Html.DisplayNameFor(model => model.State)
+        </th>
+        <th>
+            @Html.DisplayName("Комментарий")
+        </th>
 </tr>
 
 @foreach (var item in Model)
@@ -88,6 +93,9 @@
         </td>*@
         <td>
             @Html.DisplayFor(modelItem => item.User.FullName)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.User.Unit)
         </td>
         <td>
             @Html.DisplayFor(modelItem => item.CreationDate)
@@ -106,6 +114,9 @@
         </td>*@
         <td>
             @Html.DisplayFor(modelItem => item.State)
+        </td>
+        <td>
+            @Html.DisplayFor(modelItem => item.CommentRequest)
         </td>
         <td>
             @Html.ActionLink("Редактировать", "Edit", new { id = item.RequestID }) |

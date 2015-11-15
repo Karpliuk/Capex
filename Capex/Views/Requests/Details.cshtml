@@ -75,7 +75,13 @@
         </dt>
 
         <dd>
-            @Html.TextAreaFor(model => model.LongDescription, 5, 100, htmlAttributes: new {style = "width: 100%; max-width: 100%;",  @readonly = true})
+            @Html.TextAreaFor(model => model.LongDescription, 5, 100, htmlAttributes: new {style = "width: 100%; max-width: 100%;", @readonly = true})
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.CommentRequest)
+        </dt>
+        <dd>
+            @Html.TextAreaFor(model => model.CommentRequest, 5, 100, htmlAttributes: new { style = "width: 100%; max-width: 100%;", @readonly = true })
         </dd>
 
         <dt>

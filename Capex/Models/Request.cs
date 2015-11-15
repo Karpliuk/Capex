@@ -30,8 +30,11 @@ namespace Capex.Models
         [Display(Name = "Валюта")]
         public Currency Currency { get; set; }
 
-        [Display(Name = "Длинное описание")]
+        [Display(Name = "Детальное описание и обоснование")]
         public string LongDescription { get; set; }
+
+        [Display(Name = "Комментарий по обработке заявки")]
+        public string CommentRequest { get; set; }
 
         [Display(Name = "Состояние заявки")]
         public RequestState State { get; set; }
@@ -63,6 +66,9 @@ namespace Capex.Models
         [Display(Name = "Подтверждена менеджером")]
         ApprovedByManager,
 
+        [Display(Name = "Отправлено на согласование")]
+        SentToMedicover,
+
         [Display(Name = " Подтверждена CFO Medicover")]
         ApprovedByMedicover,
 
@@ -79,6 +85,9 @@ namespace Capex.Models
         Россия,
 
         [Display(Name = "Беларусь")]
-        Беларусь
+        Беларусь,
+
+        [Display(Name = "Все")]
+        Все
     }
 }

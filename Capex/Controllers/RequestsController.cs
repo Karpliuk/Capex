@@ -144,6 +144,14 @@ namespace Capex.Models
                     {
                         if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)) && (request.State == State))
                         {
+                            if (Unit == Capex.Models.Unit.Все)
+                            {
+                                if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)))
+                                {
+                                    filteredList.Add(request);
+                                }
+                            }
+                            else
                             if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
                             {
                                 filteredList.Add(request);
@@ -155,7 +163,15 @@ namespace Capex.Models
                     {
                         if ((request.CreationDate.Date >= StartCreationDate) && (request.State == State))
                         {
-                            if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
+                            if (Unit == Capex.Models.Unit.Все)
+                            {
+                                if (request.CreationDate.Date >= StartCreationDate)
+                                {
+                                    filteredList.Add(request);
+                                }
+                            }
+                            else
+                           if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
                             {
                                 filteredList.Add(request);
                             }
@@ -164,8 +180,16 @@ namespace Capex.Models
                     else
                     if (EndCreationDate != null)
                     {
-                        if ((request.CreationDate.Date <= EndCreationDate) && (request.State == State))
+                       if ((request.CreationDate.Date <= EndCreationDate) && (request.State == State))
                         {
+                            if (Unit == Capex.Models.Unit.Все)
+                            {
+                                if (request.CreationDate.Date <= EndCreationDate)
+                                {
+                                    filteredList.Add(request);
+                                }
+                            }
+                            else
                             if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
                             {
                                 filteredList.Add(request);
@@ -176,7 +200,13 @@ namespace Capex.Models
                     {
                         if (request.State == State)
                         {
-                            if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault()) 
+
+                            if (Unit == Capex.Models.Unit.Все)
+                            {
+                                filteredList.Add(request);
+                            }
+                            else
+                                if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault()) 
                             {
                                 filteredList.Add(request);
                             }
@@ -208,7 +238,15 @@ namespace Capex.Models
                 {
                     if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)) && (request.State == State))
                     {
-                        if(Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
+                        if (Unit == Capex.Models.Unit.Все)
+                        {
+                            if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)))
+                            {
+                                filteredList.Add(request);
+                            }
+                        }
+                        else
+                       if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
                         {
                             filteredList.Add(request);
                         }                        
@@ -219,6 +257,14 @@ namespace Capex.Models
                 {
                     if ((request.CreationDate.Date >= StartCreationDate) && (request.State == State))
                     {
+                        if (Unit == Capex.Models.Unit.Все)
+                        {
+                            if (request.CreationDate.Date >= StartCreationDate)
+                            {
+                                filteredList.Add(request);
+                            }
+                        }
+                        else
                         if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
                         {
                             filteredList.Add(request);
@@ -228,9 +274,17 @@ namespace Capex.Models
                 else
                 if (EndCreationDate != null)
                 {
-                    if ((request.CreationDate.Date <= EndCreationDate) && (request.State == State))
+                   if ((request.CreationDate.Date <= EndCreationDate) && (request.State == State))
                     {
-                        if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
+                        if (Unit == Capex.Models.Unit.Все)
+                        {
+                            if (request.CreationDate.Date <= EndCreationDate)
+                            {
+                                filteredList.Add(request);
+                            }
+                        }
+                       else
+                       if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
                         {
                             filteredList.Add(request);
                         }
@@ -238,9 +292,14 @@ namespace Capex.Models
                 }
                 else
                 {
-                    if (request.State == State)
+                   if (request.State == State)
                     {
-                        if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
+                       if (Unit == Capex.Models.Unit.Все)
+                       {
+                           filteredList.Add(request);
+                       }
+                       else
+                       if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
                         {
                             filteredList.Add(request);
                         }
@@ -282,7 +341,7 @@ namespace Capex.Models
         // сведения см. в статье http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create([Bind(Include = "RequestID,UserID,CreationDate,Description,Value,Currency,LongDescription,State")] Request request)
+        public ActionResult Create([Bind(Include = "RequestID,UserID,CreationDate,Description,Value,Currency,LongDescription,CommentRequest,State")] Request request)
         {
             try
             {
@@ -357,7 +416,7 @@ namespace Capex.Models
         // сведения см. в статье http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Edit([Bind(Include = "RequestID,UserID,CreationDate,Description,Value,Currency,LongDescription,State")] Request request)
+        public ActionResult Edit([Bind(Include = "RequestID,UserID,CreationDate,Description,Value,Currency,LongDescription,CommentRequest,State")] Request request)
         {
             try
             {
@@ -385,17 +444,9 @@ namespace Capex.Models
         {
             try
             {
-                UserRole role;
-                if (request.UserID == User.Identity.Name)
-                {
-                    role = UserRole.User;
-                }
-                else
-                {
-                    role = (from c in db.Users
+                UserRole role = (from c in db.Users
                             where c.UserID == User.Identity.Name
                             select c.Role).FirstOrDefault();
-                }
 
                 switch (role)
                 {
@@ -474,6 +525,24 @@ namespace Capex.Models
                                 Value = RequestState.Cancelled.ToString()
                             });
                         }
+                        else if (request.State == RequestState.Cancelled)
+                        {
+                            ManagerRole.Add(new SelectListItem
+                            {
+                                Text = request.State.ToString(),
+                                Value = request.State.ToString()
+                            });
+                            ManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.ApprovedByManager.ToString(),
+                                Value = RequestState.ApprovedByManager.ToString()
+                            });
+                            ManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.Created.ToString(),
+                                Value = RequestState.Created.ToString()
+                            });
+                        }
                         else
                         {
                             ManagerRole.Add(new SelectListItem
@@ -494,7 +563,29 @@ namespace Capex.Models
                                 Text = request.State.ToString(),
                                 Value = request.State.ToString()
                             });
-
+                            CFOMedicoveRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.SentToMedicover.ToString(),
+                                Value = RequestState.SentToMedicover.ToString()
+                            });
+                            CFOMedicoveRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.ApprovedByMedicover.ToString(),
+                                Value = RequestState.ApprovedByMedicover.ToString()
+                            });
+                            CFOMedicoveRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.Cancelled.ToString(),
+                                Value = RequestState.Cancelled.ToString()
+                            });
+                        }
+                        else if (request.State == RequestState.SentToMedicover)
+                        {
+                            CFOMedicoveRole.Add(new SelectListItem
+                            {
+                                Text = request.State.ToString(),
+                                Value = request.State.ToString()
+                            });
                             CFOMedicoveRole.Add(new SelectListItem
                             {
                                 Text = RequestState.ApprovedByMedicover.ToString(),
@@ -568,7 +659,24 @@ namespace Capex.Models
                                 Text = request.State.ToString(),
                                 Value = request.State.ToString()
                             });
-
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.SentToMedicover.ToString(),
+                                Value = RequestState.SentToMedicover.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.Cancelled.ToString(),
+                                Value = RequestState.Cancelled.ToString()
+                            });
+                        }
+                        else if (request.State == RequestState.SentToMedicover)
+                        {
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = request.State.ToString(),
+                                Value = request.State.ToString()
+                            });
                             FinancialManagerRole.Add(new SelectListItem
                             {
                                 Text = RequestState.ApprovedByMedicover.ToString(),
@@ -592,6 +700,11 @@ namespace Capex.Models
                             {
                                 Text = request.State.ToString(),
                                 Value = request.State.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = RequestState.SentToMedicover.ToString(),
+                                Value = RequestState.SentToMedicover.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
@@ -668,50 +781,26 @@ namespace Capex.Models
         {
             // All State
             List<SelectListItem> itemsRequests = new List<SelectListItem>();
-            itemsRequests.Add(new SelectListItem
+            foreach (object item in Enum.GetValues(typeof(RequestState)))
             {
-                Text = RequestState.Created.ToString(),
-                Value = RequestState.Created.ToString()
-            });
-            itemsRequests.Add(new SelectListItem
-            {
-                Text = RequestState.Cancelled.ToString(),
-                Value = RequestState.Cancelled.ToString()
-            });
-            itemsRequests.Add(new SelectListItem
-            {
-                Text = RequestState.ApprovedByManager.ToString(),
-                Value = RequestState.ApprovedByManager.ToString()
-            });
-            itemsRequests.Add(new SelectListItem
-            {
-                Text = RequestState.ApprovedByMedicover.ToString(),
-                Value = RequestState.ApprovedByMedicover.ToString()
-            });
-            itemsRequests.Add(new SelectListItem
-            {
-                Text = RequestState.Finalized.ToString(),
-                Value = RequestState.Finalized.ToString()
-            });
+                itemsRequests.Add(new SelectListItem
+                {
+                    Text = item.ToString(),
+                    Value = item.ToString()
+                });
+            }
             ViewBag.State = itemsRequests;
 
             // All Unit
             List<SelectListItem> itemsUsers = new List<SelectListItem>();
-            itemsUsers.Add(new SelectListItem
+            foreach (object item in Enum.GetValues(typeof(Unit)))
             {
-                Text = Unit.Украина.ToString(),
-                Value = Unit.Украина.ToString()
-            });
-            itemsUsers.Add(new SelectListItem
-            {
-                Text = Unit.Россия.ToString(),
-                Value = Unit.Россия.ToString()
-            });
-            itemsUsers.Add(new SelectListItem
-            {
-                Text = Unit.Беларусь.ToString(),
-                Value = Unit.Беларусь.ToString()
-            });
+                itemsUsers.Add(new SelectListItem
+                {
+                    Text = item.ToString(),
+                    Value = item.ToString()
+                });
+            }
             ViewBag.Unit = itemsUsers;
         }
 

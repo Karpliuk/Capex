@@ -59,12 +59,22 @@
         </div>
 
         <div class="form-group">
-            @Html.LabelFor(model => model.LongDescription, htmlAttributes: new { @class = "control-label col-md-2" })
+            @Html.LabelFor(model => model.LongDescription, htmlAttributes: new {@class = "control-label col-md-2"})
             <div class="col-md-10">
-                @Html.TextAreaFor(model => model.LongDescription, new { cols = 40, @rows = 5, @style = "margin-left:10px;" })
-                @Html.ValidationMessageFor(model => model.LongDescription, "", new { @class = "text-danger" })
+                @Html.TextAreaFor(model => model.LongDescription, new {cols = 40, @rows = 5, @style = "margin-left:10px;"})
+                @Html.ValidationMessageFor(model => model.LongDescription, "", new {@class = "text-danger"})
             </div>
         </div>
+
+        <div class="form-group">
+            @Html.LabelFor(model => model.CommentRequest, htmlAttributes: new { @class = "control-label col-md-2" })
+            <div class="col-md-10">
+                @Html.TextAreaFor(model => model.CommentRequest, new { cols = 40, @rows = 5, @style = "margin-left:10px;" })
+                @Html.ValidationMessageFor(model => model.CommentRequest, "", new { @class = "text-danger" })
+            </div>
+        </div>
+
+        
 
         @*<div class="form-group" style="display:none;">
             @Html.LabelFor(model => model.State, htmlAttributes: new { @class = "control-label col-md-2" })

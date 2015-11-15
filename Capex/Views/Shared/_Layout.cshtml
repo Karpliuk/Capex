@@ -20,12 +20,13 @@
                 @*@Html.ActionLink("Домашняя страница", "Index", "Requests", new { area = "" }, new { @class = "navbar-brand" })*@
             </div>
             <div class="navbar-collapse collapse">
-                <@*ul class="nav navbar-nav">
-                    <li>@Html.ActionLink("Домашняя страница", "Index", "Home")</li>
-                    <li>@Html.ActionLink("О программе", "About", "Home")</li>
-                    <li>@Html.ActionLink("Контакт", "Contact", "Home")</li>
-                </ul>*@
-                <p class="nav navbar-text navbar-right">Здравствуйте, @User.Identity.Name!</p>
+                <ul class="nav navbar-nav navbar-right">
+                    <li> <p class="nav navbar-text navbar-left">Здравствуйте, @User.Identity.Name!</p></li>
+                    @*<li>@Html.ActionLink("Выход", "Close", "Home")</li>*@
+                </ul>
+                @*<p class="nav navbar-text navbar-right">Выйти</p>
+                <p class="nav navbar-text navbar-left">Здравствуйте, @User.Identity.Name!</p>*@
+               
             </div>
         </div>
     </div>
