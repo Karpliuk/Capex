@@ -13,7 +13,6 @@ namespace Capex.Models
         public int RequestID { get; set; }
 
         [Display(Name = "Пользователь")]
-        public string UserID { get; set; }
         public virtual User User { get; set; }
 
         [Display(Name = "Дата создания")]
@@ -73,7 +72,13 @@ namespace Capex.Models
         ApprovedByMedicover,
 
         [Display(Name = "Завершена")]
-        Finalized
+        Finalized,
+
+        [Display(Name = "На доработке")]
+        ClarificationNeeded,
+
+        [Display(Name = "Все")]
+        All
     }
 
     public enum Unit
@@ -88,6 +93,6 @@ namespace Capex.Models
         Беларусь,
 
         [Display(Name = "Все")]
-        Все
+        All
     }
 }

@@ -9,6 +9,9 @@ namespace Capex.Models
 {
     public class User
     {
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)] 
+        public int Id { get; set; }
+
         [Display(Name = "Пользователь")]
         public string UserID { get; set; }
 
@@ -37,6 +40,9 @@ namespace Capex.Models
         CFOMedicove,
 
         [Display(Name = "Финансовый директор")]
-        FinancialManager
+        FinancialManager,
+
+        [Display(Name = "")]
+        ViewAll
     }
 }

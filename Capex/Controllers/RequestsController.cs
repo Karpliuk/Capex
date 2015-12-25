@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Data;
 using System.Data.Entity;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Security.Principal;
 using System.Web;
 using System.Web.Mvc;
@@ -15,13 +17,9 @@ namespace Capex.Models
         private CapexContext db = new CapexContext();
 
         // GET: Requests
-        public ActionResult Index(string SortRequest)
+        public ActionResult Index()
         {
-            // сортировка
-            ViewBag.NameSortParm = SortRequest == "name_asc" ? "name_desc" : "name_asc";
-            ViewBag.DateSortParm = SortRequest == "date_asc" ? "date_desc" : "date_asc";
-            ViewBag.ValueSortParm = SortRequest == "value_asc" ? "value_desc" : "value_asc";
-
+            SetUnitAndState();
 
             // проверяем есть ли такой пользователь в  бд таблице USER
             if(((from c in db.Users where c.UserID == User.Identity.Name select c.FullName).FirstOrDefault()) == null)
@@ -32,281 +30,76 @@ namespace Capex.Models
             UserRole role = (from c in db.Users
                              where c.UserID == User.Identity.Name
                              select c.Role).FirstOrDefault();
-         
+
             // получаем заявки текущего пользователя
             var requests = (from Rq in db.Requests
-                            where Rq.UserID == User.Identity.Name
+                            where Rq.User.UserID == User.Identity.Name
                             select Rq).Union
                            (from R in db.Requests
-                            where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.UserID)
+                            where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.User.UserID)
                             select R);
+
+            if (role == Capex.Models.UserRole.ViewAll)
+            {
+                ViewBag.Access = false;
+                // получаем All заявки
+                requests = (from R in db.Requests select R);
+                return View(requests.ToList());
+            }
+            else
+            {
+                ViewBag.Access = true;
+            }
 
             if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove)
             {
-                // получаем все заявки
+                // получаем All заявки
                 requests = (from R in db.Requests select R);
             }
-
-            SetUnitAndState();
+           
 
             if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove)
             {
                 var requests_ = (from Rq in db.Requests select Rq);
-                switch (SortRequest)
-                {
-                    case "name_desc":
-                        requests_ = requests_.OrderByDescending(s => s.RequestID);
-                        break;
-                    case "name_asc":
-                        requests_ = requests_.OrderBy(s => s.RequestID);
-                        break;
-                    case "date_asc":
-                        requests_ = requests_.OrderBy(s => s.CreationDate);
-                        break;
-                    case "date_desc":
-                        requests_ = requests_.OrderByDescending(s => s.CreationDate);
-                        break;
-                    case "value_asc":
-                        requests_ = requests_.OrderBy(s => s.Value);
-                        break;
-                    case "value_desc":
-                        requests_ = requests_.OrderByDescending(s => s.Value);
-                        break;
-                    default:
-                        requests_ = requests_.OrderBy(s => s.RequestID);
-                        break;
-                }
                 return View(requests_.ToList());
-            }
-
-            switch (SortRequest)
-            {
-                case "name_desc":
-                    requests = requests.OrderByDescending(s => s.RequestID);
-                    break;
-                case "name_asc":
-                    requests = requests.OrderBy(s => s.RequestID);
-                    break;
-                case "date_asc":
-                    requests = requests.OrderBy(s => s.CreationDate);
-                    break;
-                case "date_desc":
-                    requests = requests.OrderByDescending(s => s.CreationDate);
-                    break;
-                case "value_asc":
-                    requests = requests.OrderBy(s => s.Value);
-                    break;
-                case "value_desc":
-                    requests = requests.OrderByDescending(s => s.Value);
-                    break;
-                default:
-                    requests = requests.OrderBy(s => s.RequestID);
-                    break;
-            }
+            }          
 
             return View(requests.ToList());
         }
 
         [HttpPost]
-        public ActionResult Index(RequestState? State, Unit? Unit, DateTime? StartCreationDate, DateTime? EndCreationDate,  string SortRequest)
+        public ActionResult Index(RequestState? State, Unit? Unit, DateTime? StartCreationDate, DateTime? EndCreationDate)
         {
-            //if(AllRequesrts)
-            //{
-            //    return RedirectToAction("Index");
-            //}
-
+            SetUnitAndState();
             UserRole role = (from c in db.Users
                              where c.UserID == User.Identity.Name
                              select c.Role).FirstOrDefault();
-
-            var rq = (from Rq in db.Requests
-                            where Rq.UserID == User.Identity.Name
-                            select Rq).Union
-                           (from R in db.Requests
-                            where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.UserID)
-                            select R);
-            if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove)
+            if (role == Capex.Models.UserRole.ViewAll)
             {
-                rq = (from R in db.Requests select R);
+                ViewBag.Access = false;
             }
-
-            SetUnitAndState();
-
-            List<Request> filteredList;
-            if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove)
+            else
             {
-                var requests_ = (from Rq in db.Requests select Rq).ToList();
-                filteredList = new List<Request>();
-
-                foreach (var request in requests_)
-                {
-                    if ((StartCreationDate != null) && (EndCreationDate != null))
-                    {
-                        if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)) && (request.State == State))
-                        {
-                            if (Unit == Capex.Models.Unit.Все)
-                            {
-                                if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)))
-                                {
-                                    filteredList.Add(request);
-                                }
-                            }
-                            else
-                            if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
-                            {
-                                filteredList.Add(request);
-                            }
-                        }
-                    }
-                    else
-                    if (StartCreationDate != null)
-                    {
-                        if ((request.CreationDate.Date >= StartCreationDate) && (request.State == State))
-                        {
-                            if (Unit == Capex.Models.Unit.Все)
-                            {
-                                if (request.CreationDate.Date >= StartCreationDate)
-                                {
-                                    filteredList.Add(request);
-                                }
-                            }
-                            else
-                           if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
-                            {
-                                filteredList.Add(request);
-                            }
-                        }
-                    }
-                    else
-                    if (EndCreationDate != null)
-                    {
-                       if ((request.CreationDate.Date <= EndCreationDate) && (request.State == State))
-                        {
-                            if (Unit == Capex.Models.Unit.Все)
-                            {
-                                if (request.CreationDate.Date <= EndCreationDate)
-                                {
-                                    filteredList.Add(request);
-                                }
-                            }
-                            else
-                            if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
-                            {
-                                filteredList.Add(request);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (request.State == State)
-                        {
-
-                            if (Unit == Capex.Models.Unit.Все)
-                            {
-                                filteredList.Add(request);
-                            }
-                            else
-                                if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault()) 
-                            {
-                                filteredList.Add(request);
-                            }
-                        }
-                    }
-                }
-
-                //List<Request> filteredSortList = null;
-                //foreach (var filter in filteredList)
-                //{
-                //    filteredSortList.Add((from R in db.Requests where R.RequestID == filter.RequestID select R).FirstOrDefault());
-                //}
-
+                ViewBag.Access = true;
+            }
+            if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove || role == UserRole.ViewAll)
+            {
+                IEnumerable<Request> requests = (from Rq in db.Requests select Rq).ToList();
+                List<Request> filteredList = GetRequests(State, Unit, StartCreationDate, EndCreationDate, requests);
                 return View(filteredList.ToList());
             }
-
-            // получить список заявок 
-            var requests = (from Rq in db.Requests
-                            where Rq.UserID == User.Identity.Name
-                            select Rq).Union
-                           (from R in db.Requests
-                            where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.UserID)
-                            select R).ToList();
-
-            filteredList = new List<Request>();
-            foreach (var request in requests)
+            else
             {
-                if((StartCreationDate != null) && (EndCreationDate != null))
-                {
-                    if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)) && (request.State == State))
-                    {
-                        if (Unit == Capex.Models.Unit.Все)
-                        {
-                            if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)))
-                            {
-                                filteredList.Add(request);
-                            }
-                        }
-                        else
-                       if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
-                        {
-                            filteredList.Add(request);
-                        }                        
-                    }
-                }
-                else
-                if(StartCreationDate != null)
-                {
-                    if ((request.CreationDate.Date >= StartCreationDate) && (request.State == State))
-                    {
-                        if (Unit == Capex.Models.Unit.Все)
-                        {
-                            if (request.CreationDate.Date >= StartCreationDate)
-                            {
-                                filteredList.Add(request);
-                            }
-                        }
-                        else
-                        if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
-                        {
-                            filteredList.Add(request);
-                        }                       
-                    }
-                }
-                else
-                if (EndCreationDate != null)
-                {
-                   if ((request.CreationDate.Date <= EndCreationDate) && (request.State == State))
-                    {
-                        if (Unit == Capex.Models.Unit.Все)
-                        {
-                            if (request.CreationDate.Date <= EndCreationDate)
-                            {
-                                filteredList.Add(request);
-                            }
-                        }
-                       else
-                       if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
-                        {
-                            filteredList.Add(request);
-                        }
-                    }
-                }
-                else
-                {
-                   if (request.State == State)
-                    {
-                       if (Unit == Capex.Models.Unit.Все)
-                       {
-                           filteredList.Add(request);
-                       }
-                       else
-                       if (Unit == (from Us in db.Users where Us.UserID == request.UserID select Us.Unit).FirstOrDefault())
-                        {
-                            filteredList.Add(request);
-                        }
-                    }
-                }
-            }
-            return View(filteredList.ToList());
+                // получить список заявок user, manager
+                IEnumerable<Request> requests = (from Rq in db.Requests
+                                                  where Rq.User.UserID == User.Identity.Name
+                                                  select Rq).Union
+                                                 (from R in db.Requests
+                                                  where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.User.UserID)
+                                                  select R).ToList();
+                List<Request> filteredList = GetRequests(State, Unit, StartCreationDate, EndCreationDate, requests);
+                return View(filteredList.ToList());
+            }                         
         }
 
         [HttpPost]
@@ -341,14 +134,16 @@ namespace Capex.Models
         // сведения см. в статье http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create([Bind(Include = "RequestID,UserID,CreationDate,Description,Value,Currency,LongDescription,CommentRequest,State")] Request request)
+        public ActionResult Create([Bind(Include = "RequestID,CreationDate,Description,Value,Currency,LongDescription,CommentRequest,State,User_Id")] Request request)
         {
             try
             {
                 if (ModelState.IsValid)
                 {
                     // некоторые значения дефолтные
-                    request.UserID = User.Identity.Name;
+                    request.User = (from c in db.Users
+                                    where c.UserID == User.Identity.Name
+                                    select c).FirstOrDefault();
                     request.CreationDate = DateTime.Now;
                     // получаем роль текущего пользователя
                     UserRole role = (from c in db.Users
@@ -456,12 +251,12 @@ namespace Capex.Models
                         {
                             UserRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             UserRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Finalized.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Finalized),
                                 Value = RequestState.Finalized.ToString()
                             });
                         }
@@ -470,7 +265,7 @@ namespace Capex.Models
                         {
                             UserRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                         }
@@ -480,12 +275,31 @@ namespace Capex.Models
 
                             UserRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             UserRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Cancelled.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
+                                Value = RequestState.Cancelled.ToString()
+                            });
+                        }
+                        else
+                        if(request.State == RequestState.ClarificationNeeded)
+                        {
+                            UserRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
+                                Value = request.State.ToString()
+                            });
+                            UserRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Created),
+                                Value = RequestState.Created.ToString()
+                            });
+                            UserRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
                                 Value = RequestState.Cancelled.ToString()
                             });
                         }
@@ -493,16 +307,15 @@ namespace Capex.Models
                         {
                             UserRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             UserRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Created.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Created),
                                 Value = RequestState.Created.ToString()
                             });
                         }
-
                         ViewBag.State = UserRole;
                         break;
                     case Models.UserRole.Manager:
@@ -511,17 +324,22 @@ namespace Capex.Models
                         {
                             ManagerRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             ManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.ApprovedByManager.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ApprovedByManager),
                                 Value = RequestState.ApprovedByManager.ToString()
                             });
                             ManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Cancelled.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ClarificationNeeded),
+                                Value = RequestState.ClarificationNeeded.ToString()
+                            });
+                            ManagerRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
                                 Value = RequestState.Cancelled.ToString()
                             });
                         }
@@ -529,25 +347,54 @@ namespace Capex.Models
                         {
                             ManagerRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             ManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.ApprovedByManager.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ApprovedByManager),
                                 Value = RequestState.ApprovedByManager.ToString()
                             });
                             ManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Created.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ClarificationNeeded),
+                                Value = RequestState.ClarificationNeeded.ToString()
+                            });
+                            ManagerRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Created),
                                 Value = RequestState.Created.ToString()
+                            });
+                        }
+                        else
+                        if (request.State == RequestState.ClarificationNeeded)
+                        {
+                            ManagerRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
+                                Value = request.State.ToString()
+                            });
+                            ManagerRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Created),
+                                Value = RequestState.Created.ToString()
+                            });
+                            ManagerRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
+                                Value = RequestState.Cancelled.ToString()
+                            });
+                            ManagerRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ApprovedByManager),
+                                Value = RequestState.ApprovedByManager.ToString()
                             });
                         }
                         else
                         {
                             ManagerRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                         }
@@ -560,22 +407,27 @@ namespace Capex.Models
                         {
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = RequestState.SentToMedicover.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.SentToMedicover),
                                 Value = RequestState.SentToMedicover.ToString()
                             });
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = RequestState.ApprovedByMedicover.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ApprovedByMedicover),
                                 Value = RequestState.ApprovedByMedicover.ToString()
                             });
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Cancelled.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ClarificationNeeded),
+                                Value = RequestState.ClarificationNeeded.ToString()
+                            });
+                            CFOMedicoveRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
                                 Value = RequestState.Cancelled.ToString()
                             });
                         }
@@ -583,17 +435,22 @@ namespace Capex.Models
                         {
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = RequestState.ApprovedByMedicover.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ApprovedByMedicover),
                                 Value = RequestState.ApprovedByMedicover.ToString()
                             });
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Cancelled.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ClarificationNeeded),
+                                Value = RequestState.ClarificationNeeded.ToString()
+                            });
+                            CFOMedicoveRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
                                 Value = RequestState.Cancelled.ToString()
                             });
                         }
@@ -602,12 +459,17 @@ namespace Capex.Models
                         {
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Cancelled.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ClarificationNeeded),
+                                Value = RequestState.ClarificationNeeded.ToString()
+                            });
+                            CFOMedicoveRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
                                 Value = RequestState.Cancelled.ToString()
                             });
                         }
@@ -615,7 +477,7 @@ namespace Capex.Models
                         {
                             CFOMedicoveRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                         }
@@ -627,27 +489,32 @@ namespace Capex.Models
                         {
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.ApprovedByManager.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ApprovedByManager),
                                 Value = RequestState.ApprovedByManager.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.ApprovedByMedicover.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ApprovedByMedicover),
                                 Value = RequestState.ApprovedByMedicover.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Finalized.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Finalized),
                                 Value = RequestState.Finalized.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Cancelled.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ClarificationNeeded),
+                                Value = RequestState.ClarificationNeeded.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
                                 Value = RequestState.Cancelled.ToString()
                             });
                         }
@@ -656,17 +523,27 @@ namespace Capex.Models
                         {
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                               Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.SentToMedicover.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.SentToMedicover),
                                 Value = RequestState.SentToMedicover.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Cancelled.ToString(),
+                               Text = GetDisplayNameFromEnumRequestState(RequestState.ApprovedByMedicover),
+                                Value = RequestState.ApprovedByMedicover.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ClarificationNeeded),
+                                Value = RequestState.ClarificationNeeded.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
                                 Value = RequestState.Cancelled.ToString()
                             });
                         }
@@ -674,22 +551,27 @@ namespace Capex.Models
                         {
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                               Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.ApprovedByMedicover.ToString(),
+                               Text = GetDisplayNameFromEnumRequestState(RequestState.ApprovedByMedicover),
                                 Value = RequestState.ApprovedByMedicover.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Finalized.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Finalized),
                                 Value = RequestState.Finalized.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Cancelled.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ClarificationNeeded),
+                                Value = RequestState.ClarificationNeeded.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
                                 Value = RequestState.Cancelled.ToString()
                             });
                         }
@@ -698,22 +580,27 @@ namespace Capex.Models
                         {
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                               Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.SentToMedicover.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.SentToMedicover),
                                 Value = RequestState.SentToMedicover.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Finalized.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Finalized),
                                 Value = RequestState.Finalized.ToString()
                             });
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = RequestState.Cancelled.ToString(),
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.ClarificationNeeded),
+                                Value = RequestState.ClarificationNeeded.ToString()
+                            });
+                            FinancialManagerRole.Add(new SelectListItem
+                            {
+                                Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
                                 Value = RequestState.Cancelled.ToString()
                             });
                         }
@@ -721,7 +608,7 @@ namespace Capex.Models
                         {
                             FinancialManagerRole.Add(new SelectListItem
                             {
-                                Text = request.State.ToString(),
+                               Text = GetDisplayNameFromEnumRequestState(request.State),
                                 Value = request.State.ToString()
                             });
                         }
@@ -733,17 +620,17 @@ namespace Capex.Models
                         //{
                         //    FinancialManagerRole.Add(new SelectListItem
                         //    {
-                        //        Text = request.State.ToString(),
+                        //       Text = GetDisplayNameFromEnumRequestState(request.State),
                         //        Value = request.State.ToString()
                         //    });
                         //    FinancialManagerRole.Add(new SelectListItem
                         //    {
-                        //        Text = RequestState.Finalized.ToString(),
+                        //        Text = GetDisplayNameFromEnumRequestState(RequestState.Finalized),
                         //        Value = RequestState.Finalized.ToString()
                         //    });
                         //    FinancialManagerRole.Add(new SelectListItem
                         //    {
-                        //        Text = RequestState.Cancelled.ToString(),
+                        //        Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
                         //        Value = RequestState.Cancelled.ToString()
                         //    });
                         //}
@@ -752,12 +639,12 @@ namespace Capex.Models
                         //{
                         //    FinancialManagerRole.Add(new SelectListItem
                         //    {
-                        //        Text = request.State.ToString(),
+                        //       Text = GetDisplayNameFromEnumRequestState(request.State),
                         //        Value = request.State.ToString()
                         //    });
                         //    FinancialManagerRole.Add(new SelectListItem
                         //    {
-                        //        Text = RequestState.Cancelled.ToString(),
+                        //        Text = GetDisplayNameFromEnumRequestState(RequestState.Cancelled),
                         //        Value = RequestState.Cancelled.ToString()
                         //    });
                         //}
@@ -765,7 +652,7 @@ namespace Capex.Models
                         //{
                         //    FinancialManagerRole.Add(new SelectListItem
                         //    {
-                        //        Text = request.State.ToString(),
+                        //       Text = GetDisplayNameFromEnumRequestState(request.State),
                         //        Value = request.State.ToString()
                         //    });
                         //}
@@ -773,19 +660,19 @@ namespace Capex.Models
                         break;
                 }
             }
-            catch(Exception ex) { }
-           
+            catch(Exception ex) { }           
         }
 
+
         private void SetUnitAndState()
-        {
+        {          
             // All State
             List<SelectListItem> itemsRequests = new List<SelectListItem>();
-            foreach (object item in Enum.GetValues(typeof(RequestState)))
+            foreach (Enum item in Enum.GetValues(typeof(RequestState)))
             {
                 itemsRequests.Add(new SelectListItem
                 {
-                    Text = item.ToString(),
+                    Text = GetDisplayNameFromEnumRequestState(item),
                     Value = item.ToString()
                 });
             }
@@ -793,15 +680,47 @@ namespace Capex.Models
 
             // All Unit
             List<SelectListItem> itemsUsers = new List<SelectListItem>();
-            foreach (object item in Enum.GetValues(typeof(Unit)))
+            foreach (Enum item in Enum.GetValues(typeof(Unit)))
             {
                 itemsUsers.Add(new SelectListItem
                 {
-                    Text = item.ToString(),
+                    Text = GetDisplayNameFromEnumUnit(item),
                     Value = item.ToString()
                 });
             }
             ViewBag.Unit = itemsUsers;
+        }
+
+        public string GetDisplayNameFromEnumRequestState(Enum item)
+        {
+            try
+            {
+                var type = typeof(RequestState);
+                var member = type.GetMember(item.ToString());
+                var attributes = member[0].GetCustomAttributes(typeof(DisplayAttribute), false);
+                return ((DisplayAttribute)attributes[0]).Name;
+            }   
+            catch(Exception ex)
+            {
+
+            }      
+            return "";
+        }
+
+        public string GetDisplayNameFromEnumUnit(Enum item)
+        {
+            try
+            {
+                var type = typeof(Unit);
+                var member = type.GetMember(item.ToString());
+                var attributes = member[0].GetCustomAttributes(typeof(DisplayAttribute), false);
+                return ((DisplayAttribute)attributes[0]).Name;
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return "";
         }
 
         // GET: Requests/Delete/5
@@ -844,5 +763,165 @@ namespace Capex.Models
             }
             base.Dispose(disposing);
         }
+
+        public List<Request> GetRequests(RequestState? State, Unit? Unit, DateTime? StartCreationDate, DateTime? EndCreationDate, IEnumerable<Request> requests)
+        {           
+           // var requests_ = (from Rq in db.Requests select Rq).ToList();
+           List<Request> filteredList = new List<Request>();
+
+            foreach (var request in requests)
+            {
+                if ((StartCreationDate != null) && (EndCreationDate != null))
+                {
+                    if ((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate))
+                    {
+                        if (State == Capex.Models.RequestState.All)
+                        {
+                            if (Unit == Capex.Models.Unit.All)
+                            {
+                                if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)))
+                                {
+                                    filteredList.Add(request);
+                                }
+                            }
+                            else
+                            if (Unit == (from Us in db.Users where Us.UserID == request.User.UserID select Us.Unit).FirstOrDefault())
+                            {
+                                filteredList.Add(request);
+                            }
+                        }
+                        else
+                        {
+                            if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)) && (request.State == State))
+                            {
+                                if (Unit == Capex.Models.Unit.All)
+                                {
+                                    if (((request.CreationDate.Date >= StartCreationDate) && (request.CreationDate.Date <= EndCreationDate)))
+                                    {
+                                        filteredList.Add(request);
+                                    }
+                                }
+                                else
+                                if (Unit == (from Us in db.Users where Us.UserID == request.User.UserID select Us.Unit).FirstOrDefault())
+                                {
+                                    filteredList.Add(request);
+                                }
+                            }
+                        }
+
+                    }
+                }
+                else
+                if (StartCreationDate != null)
+                {
+                    if (request.CreationDate.Date >= StartCreationDate)
+                    {
+                        if (State == Capex.Models.RequestState.All)
+                        {
+                            if (Unit == Capex.Models.Unit.All)
+                            {
+                                if (request.CreationDate.Date >= StartCreationDate)
+                                {
+                                    filteredList.Add(request);
+                                }
+                            }
+                            else
+                                if (Unit == (from Us in db.Users where Us.UserID == request.User.UserID select Us.Unit).FirstOrDefault())
+                            {
+                                filteredList.Add(request);
+                            }
+                        }
+                        else
+                        {
+                            if ((request.CreationDate.Date >= StartCreationDate) && (request.State == State))
+                            {
+                                if (Unit == Capex.Models.Unit.All)
+                                {
+                                    if (request.CreationDate.Date >= StartCreationDate)
+                                    {
+                                        filteredList.Add(request);
+                                    }
+                                }
+                                else
+                                if (Unit == (from Us in db.Users where Us.UserID == request.User.UserID select Us.Unit).FirstOrDefault())
+                                {
+                                    filteredList.Add(request);
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                if (EndCreationDate != null)
+                {
+                    if (request.CreationDate.Date <= EndCreationDate)
+
+                    {
+                        if (State == Capex.Models.RequestState.All)
+                        {
+                            if (Unit == Capex.Models.Unit.All)
+                            {
+                                if (request.CreationDate.Date <= EndCreationDate)
+                                {
+                                    filteredList.Add(request);
+                                }
+                            }
+                            else
+                            if (Unit == (from Us in db.Users where Us.UserID == request.User.UserID select Us.Unit).FirstOrDefault())
+                            {
+                                filteredList.Add(request);
+                            }
+                        }
+                        else
+                        {
+                            if ((request.CreationDate.Date <= EndCreationDate) && (request.State == State))
+                            {
+                                if (Unit == Capex.Models.Unit.All)
+                                {
+                                    if (request.CreationDate.Date <= EndCreationDate)
+                                    {
+                                        filteredList.Add(request);
+                                    }
+                                }
+                                else
+                                if (Unit == (from Us in db.Users where Us.UserID == request.User.UserID select Us.Unit).FirstOrDefault())
+                                {
+                                    filteredList.Add(request);
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (State == Capex.Models.RequestState.All)
+                    {
+                        if (Unit == Capex.Models.Unit.All)
+                        {
+                            filteredList.Add(request);
+                        }
+                        else
+                            if (Unit == (from Us in db.Users where Us.UserID == request.User.UserID select Us.Unit).FirstOrDefault())
+                        {
+                            filteredList.Add(request);
+                        }
+                    }
+                    else
+                    if (request.State == State)
+                    {
+                        if (Unit == Capex.Models.Unit.All)
+                        {
+                            filteredList.Add(request);
+                        }
+                        else
+                        if (Unit == (from Us in db.Users where Us.UserID == request.User.UserID select Us.Unit).FirstOrDefault())
+                        {
+                            filteredList.Add(request);
+                        }
+                    }                    
+               }           
+          }
+            return filteredList.ToList();
+        }       
     }
 }

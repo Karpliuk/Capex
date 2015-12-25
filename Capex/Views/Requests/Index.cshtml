@@ -5,7 +5,12 @@
 }
 
 <h2 style="text-align:center;">Список заявок</h2>
-<h4 style="text-align:center;"> @Html.ActionLink("Создать", "Create", null, htmlAttributes: new { @style = "color:#5CB85C; text-decoration:none" }) </h4>
+<h4 style="text-align:center;">
+    @if (ViewBag.Access == true)
+    {
+        @Html.ActionLink("Создать", "Create", null, htmlAttributes: new { @style = "color:#5CB85C; text-decoration:none" })
+    }
+ </h4>
 
 @using (Html.BeginForm())
 {
@@ -44,86 +49,103 @@
     </div>
 }
 
-<table class="table">
-    <tr>
-        <th>
-            @Html.ActionLink("№ Заявки", "Index", new { SortRequest = ViewBag.NameSortParm })
-            @*@Html.DisplayNameFor(model => model.RequestID)*@
-        </th>
-        @*<th>
-            @Html.DisplayNameFor(model => model.UserID)
-        </th>*@
-        <th>
-            @Html.DisplayNameFor(model => model.User.FullName)
-        </th>
-        <th>
-            @Html.DisplayNameFor(model => model.User.Unit)
-        </th>
-        <th>
-            @Html.ActionLink("Дата создания", "Index", new { SortRequest = ViewBag.DateSortParm })
-        </th>
-        <th>
-            @Html.DisplayNameFor(model => model.Description)
-        </th>
-        <th>
-            @Html.ActionLink("Стоимость", "Index", new { SortRequest = ViewBag.ValueSortParm })
-        </th>
-        <th>
-            @Html.DisplayNameFor(model => model.Currency)
-        </th>
-        @*<th>
-                @Html.DisplayNameFor(model => model.LongDescription)
-        </th>*@
-        <th>
-            @Html.DisplayNameFor(model => model.State)
-        </th>
-        <th>
-            @Html.DisplayName("Комментарий")
-        </th>
-</tr>
-
-@foreach (var item in Model)
-{
-    <tr>
-        <td>
-            @Html.DisplayFor(modelItem => item.RequestID)
-        </td>
-        @*<td>
-            @Html.DisplayFor(modelItem => item.UserID)
-        </td>*@
-        <td>
-            @Html.DisplayFor(modelItem => item.User.FullName)
-        </td>
-        <td>
-            @Html.DisplayFor(modelItem => item.User.Unit)
-        </td>
-        <td>
-            @Html.DisplayFor(modelItem => item.CreationDate)
-        </td>
-        <td>
-            @Html.DisplayFor(modelItem => item.Description)
-        </td>
-        <td>
-            @Html.DisplayFor(modelItem => item.Value)
-        </td>
-        <td>
-            @Html.DisplayFor(modelItem => item.Currency)
-        </td>
-        @*<td>
-                @Html.DisplayFor(modelItem => item.LongDescription)
-        </td>*@
-        <td>
-            @Html.DisplayFor(modelItem => item.State)
-        </td>
-        <td>
-            @Html.DisplayFor(modelItem => item.CommentRequest)
-        </td>
-        <td>
-            @Html.ActionLink("Редактировать", "Edit", new { id = item.RequestID }) |
-            @Html.ActionLink("Просмотр", "Details", new { id = item.RequestID }) |
-            @*@Html.ActionLink("Delete", "Delete", new { id=item.RequestID })*@
-        </td>
-    </tr>
-}
-
+<table class="table table-condensed table-striped" id="TableResults">
+    <thead style="background-color: LightSkyBlue; text-align: center;">
+        <tr>
+            <th>
+                @*@Html.ActionLink("№ Заявки", "Index", new { SortRequest = ViewBag.NameSortParm })*@
+                @Html.DisplayNameFor(model => model.RequestID)
+            </th>
+            @*<th>
+                    @Html.DisplayNameFor(model => model.UserID)
+                </th>*@
+            <th>
+                @Html.DisplayNameFor(model => model.User.FullName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.User.Unit)
+            </th>
+            <th>
+                @*@Html.ActionLink("Дата создания", "Index", new { SortRequest = ViewBag.DateSortParm })*@
+                @Html.DisplayNameFor(model => model.CreationDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Description)
+            </th>
+            <th>
+                @*@Html.ActionLink("Стоимость", "Index", new { SortRequest = ViewBag.ValueSortParm })*@
+                @Html.DisplayNameFor(model => model.Value)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Currency)
+            </th>
+            @*<th>
+                        @Html.DisplayNameFor(model => model.LongDescription)
+                </th>*@
+            <th>
+                @Html.DisplayNameFor(model => model.State)
+            </th>
+            <th>
+                @Html.DisplayName("Комментарий")
+            </th>
+            <th>
+            </th>
+           </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>
+                    @Html.DisplayFor(modelItem => item.RequestID)
+                </td>
+                @*<td>
+                        @Html.DisplayFor(modelItem => item.UserID)
+                    </td>*@
+                <td>
+                    @Html.DisplayFor(modelItem => item.User.FullName)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.User.Unit)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CreationDate)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Description)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Value)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.Currency)
+                </td>
+                @*<td>
+                            @Html.DisplayFor(modelItem => item.LongDescription)
+                    </td>*@
+                <td>
+                    @Html.DisplayFor(modelItem => item.State)
+                </td>
+                <td>
+                    @Html.DisplayFor(modelItem => item.CommentRequest)
+                </td>
+                <td>
+                    @if (ViewBag.Access == true)
+                {
+                        @Html.Label(" | ")
+                        @Html.ActionLink("Редактировать", "Edit", new { id = item.RequestID })
+                        @Html.Label(" | ");
+                        @Html.ActionLink("Просмотр", "Details", new { id = item.RequestID })
+                    }
+                    @*@Html.ActionLink("Delete", "Delete", new { id=item.RequestID })*@
+                </td>
+            </tr>
+        }
+    </tbody>
 </table>
+
+<script>
+    $(document).ready(function() {
+        $('#TableResults').dataTable();
+    });
+</script>
