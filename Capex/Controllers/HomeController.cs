@@ -33,7 +33,6 @@ namespace Capex.Controllers
         public ActionResult Close()
         {
             HttpCookie cookie = base.Request.Cookies["TSWA-Last-User"];
-
             if (base.User.Identity.IsAuthenticated == false || cookie == null || StringComparer.OrdinalIgnoreCase.Equals(base.User.Identity.Name, cookie.Value))
             {
 

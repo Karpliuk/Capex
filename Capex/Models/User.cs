@@ -26,6 +26,9 @@ namespace Capex.Models
 
         [Display(Name = "Руководитель")]
         public string ManagerID { get; set; }
+
+        [Display(Name = "Посмотреть все")]
+        public bool? ViewAll { get; set; }
     }
 
     public enum UserRole

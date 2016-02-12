@@ -8,7 +8,7 @@
 <h4 style="text-align:center;">
     @if (ViewBag.Access == true)
     {
-        @Html.ActionLink("Создать", "Create", null, htmlAttributes: new { @style = "color:#5CB85C; text-decoration:none" })
+        @Html.ActionLink("Создать", "Create", null, htmlAttributes: new { @style = "color:#5CB85C; text-decoration:none", @class= "glyphicon glyphicon-pencil" })
     }
  </h4>
 
@@ -36,7 +36,7 @@
                 @*All
                 <br/>
                 @Html.CheckBox("AllRequesrts", new { @style = "width:40px; height:26px;" })*@
-                <button name="action" value="filter" class="btn btn-success" style="width:170px; height:35px; border-radius:10px;">Фильтр</button>
+                <button name="action" value="filter" class="btn btn-success" style="width:170px; height:35px; border-radius:10px;">Фильтр <i class="glyphicon glyphicon-filter" style="padding-left: 10px;"></i></button>
             </div>    
            </div>        
       </div>       
@@ -45,7 +45,7 @@
 @using (Html.BeginForm("ShowAll", "Requests"))
 {
     <div class="col-md-2" style="text-align:right; padding-top:12px; padding-right:30px; float:right; margin-top:-57px;">
-        <button name="allRequesrts" value="allRequesrts" class="btn btn-primary" style="width:170px; height:35px; border-radius:10px;">Показать все</button>
+        <button name="allRequesrts" value="allRequesrts" class="btn btn-primary" style="width:170px; height:35px; border-radius:10px;">Показать все<i class="glyphicon glyphicon-list-alt" style="padding-left: 10px;"></i></button>
     </div>
 }
 
@@ -85,10 +85,10 @@
             <th>
                 @Html.DisplayNameFor(model => model.State)
             </th>
-            <th>
+            <th class="no-sort">
                 @Html.DisplayName("Комментарий")
             </th>
-            <th>
+            <th class="no-sort">
             </th>
            </tr>
     </thead>
@@ -131,11 +131,24 @@
                 </td>
                 <td>
                     @if (ViewBag.Access == true)
-                {
-                        @Html.Label(" | ")
-                        @Html.ActionLink("Редактировать", "Edit", new { id = item.RequestID })
-                        @Html.Label(" | ");
-                        @Html.ActionLink("Просмотр", "Details", new { id = item.RequestID })
+                    {
+                        if (ViewBag.All_Request != null)
+                        {
+                            if (ViewBag.All_Request.Contains(item.RequestID))
+                            {
+                                @Html.Label(" | ")
+                                @Html.ActionLink("Редактировать", "Edit", new { id = item.RequestID })
+                                @Html.Label(" | ")
+                                @Html.ActionLink("Просмотр", "Details", new { id = item.RequestID })
+                            }
+                        }
+                        else
+                        {
+                            @Html.Label(" | ")
+                            @Html.ActionLink("Редактировать", "Edit", new { id = item.RequestID })
+                            @Html.Label(" | ")
+                            @Html.ActionLink("Просмотр", "Details", new { id = item.RequestID })
+                        }
                     }
                     @*@Html.ActionLink("Delete", "Delete", new { id=item.RequestID })*@
                 </td>
@@ -146,6 +159,13 @@
 
 <script>
     $(document).ready(function() {
-        $('#TableResults').dataTable();
+        var table = $('#TableResults').DataTable(
+           {
+               "order": [[0, "desc"]],
+               "columnDefs": [{
+                   "targets": 'no-sort',
+                   "orderable": false
+               }]
+           });
     });
 </script>

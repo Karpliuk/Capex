@@ -17,10 +17,13 @@ namespace Capex.Models
         private CapexContext db = new CapexContext();
 
         // GET: Requests
-        public ActionResult Index()
+        public ActionResult Index(bool filter=false)
         {
+            if (filter)
+            {
+                return Index((RequestState?)Session["State"], (Unit?)Session["Unit"], (DateTime?)Session["StartCreationDate"], (DateTime?)Session["EndCreationDate"]);
+            }
             SetUnitAndState();
-
             // проверяем есть ли такой пользователь в  бд таблице USER
             if(((from c in db.Users where c.UserID == User.Identity.Name select c.FullName).FirstOrDefault()) == null)
             {
@@ -53,17 +56,24 @@ namespace Capex.Models
 
             if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove)
             {
-                // получаем All заявки
-                requests = (from R in db.Requests select R);
-            }
-           
-
-            if (role == UserRole.FinancialManager || role == UserRole.CFOMedicove)
-            {
                 var requests_ = (from Rq in db.Requests select Rq);
                 return View(requests_.ToList());
-            }          
+            }
 
+            bool? view_All_Request_for_User =
+               db.Users.Where(x => x.UserID == User.Identity.Name).Select(x => x.ViewAll).FirstOrDefault();
+            if (view_All_Request_for_User == true)
+            {
+                // получаем заявки текущего пользователя
+                ViewBag.All_Request = (from Rq in db.Requests
+                                       where Rq.User.UserID == User.Identity.Name
+                                       select Rq.RequestID).Union
+                               (from R in db.Requests
+                                where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.User.UserID)
+                                select R.RequestID).ToList();
+
+                requests = (from Rq in db.Requests select Rq);
+            }
             return View(requests.ToList());
         }
 
@@ -71,6 +81,7 @@ namespace Capex.Models
         public ActionResult Index(RequestState? State, Unit? Unit, DateTime? StartCreationDate, DateTime? EndCreationDate)
         {
             SetUnitAndState();
+            InitializationFilterVariable(State, Unit, StartCreationDate, EndCreationDate);
             UserRole role = (from c in db.Users
                              where c.UserID == User.Identity.Name
                              select c.Role).FirstOrDefault();
@@ -90,16 +101,42 @@ namespace Capex.Models
             }
             else
             {
-                // получить список заявок user, manager
-                IEnumerable<Request> requests = (from Rq in db.Requests
-                                                  where Rq.User.UserID == User.Identity.Name
-                                                  select Rq).Union
-                                                 (from R in db.Requests
-                                                  where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.User.UserID)
-                                                  select R).ToList();
-                List<Request> filteredList = GetRequests(State, Unit, StartCreationDate, EndCreationDate, requests);
-                return View(filteredList.ToList());
+                bool? view_All_Request_for_User =
+                 db.Users.Where(x => x.UserID == User.Identity.Name).Select(x => x.ViewAll).FirstOrDefault();
+                if (view_All_Request_for_User == true)
+                {
+                    // получаем заявки текущего пользователя
+                    ViewBag.All_Request = (from Rq in db.Requests
+                                           where Rq.User.UserID == User.Identity.Name
+                                           select Rq.RequestID).Union
+                                   (from R in db.Requests
+                                    where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.User.UserID)
+                                    select R.RequestID).ToList();
+                    IEnumerable<Request> requests = db.Requests.ToList();
+                    List<Request> filteredList = GetRequests(State, Unit, StartCreationDate, EndCreationDate, requests);
+                    return View(filteredList.ToList());
+                }
+                else
+                {
+                    // получить список заявок user, manager
+                    IEnumerable<Request> requests = (from Rq in db.Requests
+                                                     where Rq.User.UserID == User.Identity.Name
+                                                     select Rq).Union
+                                                     (from R in db.Requests
+                                                      where (from U in db.Users where U.ManagerID == User.Identity.Name select U.UserID).Contains(R.User.UserID)
+                                                      select R).ToList();
+                    List<Request> filteredList = GetRequests(State, Unit, StartCreationDate, EndCreationDate, requests);
+                    return View(filteredList.ToList());
+                }
             }                         
+        }
+
+        private void InitializationFilterVariable(RequestState? State, Unit? Unit, DateTime? StartCreationDate,DateTime? EndCreationDate)
+        {
+            Session["State"] = State;
+            Session["Unit"] = Unit;
+            Session["StartCreationDate"] = StartCreationDate;
+            Session["EndCreationDate"] = EndCreationDate;
         }
 
         [HttpPost]
@@ -220,7 +257,7 @@ namespace Capex.Models
                     db.Entry(request).State = EntityState.Modified;
                     request.Value = decimal.Round(request.Value, 2); 
                     db.SaveChanges();
-                    return RedirectToAction("Index");
+                    return RedirectToAction("Index", new {filter=true});
                 }
                 else
                 {
