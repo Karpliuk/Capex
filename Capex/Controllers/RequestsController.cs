@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Configuration;
 using System.Data;
 using System.Data.Entity;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Configuration;
+using System.Net.Mail;
 using System.Reflection;
 using System.Security.Principal;
 using System.Web;
@@ -160,6 +164,20 @@ namespace Capex.Models
             return View(request);
         }
 
+        public ActionResult Details_ViewAllRole(int? id)
+        {
+            if (id == null)
+            {
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+            }
+            Request request = db.Requests.Find(id);
+            if (request == null)
+            {
+                return HttpNotFound();
+            }
+            return View(request);
+        }
+
         // GET: Requests/Create
         public ActionResult Create()
         {
@@ -208,6 +226,7 @@ namespace Capex.Models
                     request.Value = decimal.Round(request.Value, 2); // округлим до 2 знака после запятой
                     db.Requests.Add(request);
                     db.SaveChanges();
+                    EmailNotification(request.User, request.RequestID, request.Description);
                     return RedirectToAction("Index");
                 }
             }
@@ -233,6 +252,39 @@ namespace Capex.Models
 
             try
             {
+                // получаем роль текущего пользователя
+                UserRole role = (from c in db.Users
+                                 where c.UserID == User.Identity.Name
+                                 select c.Role).FirstOrDefault();
+                switch (role)
+                {
+                    case UserRole.User:
+                                        if ((request.State > RequestState.Created) && (request.State != RequestState.Cancelled))
+                                        {
+                                            ViewBag.PriceReadOnly = true;
+                                        }
+                                        else
+                                        {
+                                            ViewBag.PriceReadOnly = false;
+                                        }
+                                        break;
+                    case UserRole.Manager:
+                                        if (request.State > RequestState.ApprovedByManager)
+                                        {
+                                            ViewBag.PriceReadOnly = true;
+                                        }
+                                        else
+                                        {
+                                            ViewBag.PriceReadOnly = false;
+                                        }
+                                        break;
+                    case UserRole.CFOMedicove:
+                                        ViewBag.PriceReadOnly = false;
+                                        break;
+                    default:
+                                        ViewBag.PriceReadOnly = false;
+                                        break;
+                }
                 GetPossibleStates(request);
             }
             catch(Exception ex)
@@ -270,6 +322,70 @@ namespace Capex.Models
             }
 
             return View(request);
+        }
+
+        private void EmailNotification(User sendingUser, int requestID, string description)
+        {
+            List<string> destinations = new List<string>();
+            if (!String.IsNullOrEmpty(sendingUser.ManagerID))
+            {
+                destinations.Add(sendingUser.ManagerID.Remove(0, 7) + "@synevo.ua"); //SYNEVO\\
+            }
+            else
+            {
+                // список получателей Role = 3
+               var users = (from c in db.Users
+                                 where c.Role == UserRole.CFOMedicove 
+                                 select c.UserID).ToList();
+                foreach (var user in users)
+                {
+                    destinations.Add(user.Remove(0, 7) + "@synevo.ua"); //SYNEVO\\
+                }
+            }
+            // Подключите здесь службу электронной почты для отправки сообщения электронной почты.
+            SmtpSection section = (SmtpSection)ConfigurationManager.GetSection("system.net/mailSettings/smtp");
+
+            SmtpClient client = new SmtpClient(section.Network.Host, section.Network.Port);
+            client.DeliveryMethod = SmtpDeliveryMethod.Network;
+            client.UseDefaultCredentials = false;
+            client.Credentials = new NetworkCredential(section.Network.UserName, section.Network.Password);
+            client.EnableSsl = section.Network.EnableSsl;
+
+            // создаем письмо: message.Destination - адрес получателя
+            var mail = new MailMessage(section.From, destinations[0]);
+            if (destinations.Count > 1)
+            {
+                for (int i = 1; i < destinations.Count; i++)
+                {
+                    mail.To.Add(destinations[i]);
+                }
+            }
+
+            mail.Subject = ConfigurationManager.AppSettings["emailSubject"];
+            mail.Body = GetEmailBody(sendingUser.FullName, requestID, description);
+            mail.IsBodyHtml = true;
+            client.Send(mail);
+        }
+
+        private string GetEmailBody(string fullName, int requestID, string description)
+        {
+            string pathBodyFile = "Content\\" + ConfigurationManager.AppSettings["emailBody"];
+            string bodyFile = $@"{System.Web.HttpContext.Current.Server.MapPath("~/")}{pathBodyFile}\EmailBody.html";
+            if (!System.IO.File.Exists(bodyFile))
+                bodyFile = $@"{System.Web.HttpContext.Current.Server.MapPath("~/")}{pathBodyFile}\EmailBody{""}.html";
+            string emailBody;
+            try
+            {
+                emailBody = new StreamReader(bodyFile, System.Text.Encoding.ASCII).ReadToEnd();
+                emailBody = emailBody.Replace("{0}", fullName)
+                                     .Replace("{1}", requestID.ToString())
+                                     .Replace("{2}", description);
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+            return emailBody;
         }
 
         private void GetPossibleStates(Request request)
@@ -700,7 +816,6 @@ namespace Capex.Models
             catch(Exception ex) { }           
         }
 
-
         private void SetUnitAndState()
         {          
             // All State
@@ -775,7 +890,6 @@ namespace Capex.Models
             return View(request);
         }
         
-
         public ActionResult Error()
         {
             return View("Error");

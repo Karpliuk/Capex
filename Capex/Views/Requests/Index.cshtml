@@ -137,18 +137,22 @@
                             if (ViewBag.All_Request.Contains(item.RequestID))
                             {
                                 @Html.Label(" | ")
-                                @Html.ActionLink("Редактировать", "Edit", new { id = item.RequestID })
+                                @Html.ActionLink("Редактировать", "Edit", new {id = item.RequestID})
                                 @Html.Label(" | ")
-                                @Html.ActionLink("Просмотр", "Details", new { id = item.RequestID })
+                                @Html.ActionLink("Просмотр", "Details", new {id = item.RequestID})
                             }
                         }
                         else
                         {
                             @Html.Label(" | ")
-                            @Html.ActionLink("Редактировать", "Edit", new { id = item.RequestID })
+                            @Html.ActionLink("Редактировать", "Edit", new {id = item.RequestID})
                             @Html.Label(" | ")
-                            @Html.ActionLink("Просмотр", "Details", new { id = item.RequestID })
+                            @Html.ActionLink("Просмотр", "Details", new {id = item.RequestID})
                         }
+                    }
+                    else
+                    {
+                        @Html.ActionLink("Просмотр", "Details_ViewAllRole", new { id = item.RequestID })
                     }
                     @*@Html.ActionLink("Delete", "Delete", new { id=item.RequestID })*@
                 </td>
