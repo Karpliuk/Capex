@@ -13,6 +13,8 @@ using System.Reflection;
 using System.Security.Principal;
 using System.Web;
 using System.Web.Mvc;
+using System.DirectoryServices;
+using System.DirectoryServices.AccountManagement;
 
 namespace Capex.Models
 {
@@ -290,8 +292,7 @@ namespace Capex.Models
             catch(Exception ex)
             {
 
-            }           
-
+            }          
             return View(request);
         }
 
@@ -320,51 +321,72 @@ namespace Capex.Models
             {
                
             }
-
             return View(request);
         }
 
         private void EmailNotification(User sendingUser, int requestID, string description)
         {
-            List<string> destinations = new List<string>();
-            if (!String.IsNullOrEmpty(sendingUser.ManagerID))
+            try
             {
-                destinations.Add(sendingUser.ManagerID.Remove(0, 7) + "@synevo.ua"); //SYNEVO\\
-            }
-            else
-            {
-                // список получателей Role = 3
-               var users = (from c in db.Users
-                                 where c.Role == UserRole.CFOMedicove 
+                List<string> destinations = new List<string>();
+                if (!String.IsNullOrEmpty(sendingUser.ManagerID))
+                {
+                    destinations.Add(GetEmailFromAD(sendingUser.ManagerID)); //SYNEVO\\
+                }
+                else
+                {
+                    // список получателей Role = 3
+                    var users = (from c in db.Users
+                                 where c.Role == UserRole.CFOMedicove
                                  select c.UserID).ToList();
-                foreach (var user in users)
-                {
-                    destinations.Add(user.Remove(0, 7) + "@synevo.ua"); //SYNEVO\\
+                    foreach (var user in users)
+                    {
+                        destinations.Add(GetEmailFromAD(user)); //SYNEVO\\
+                    }
                 }
+                // Подключите здесь службу электронной почты для отправки сообщения электронной почты.
+                SmtpSection section = (SmtpSection)ConfigurationManager.GetSection("system.net/mailSettings/smtp");
+
+                SmtpClient client = new SmtpClient(section.Network.Host, section.Network.Port);
+                client.DeliveryMethod = SmtpDeliveryMethod.Network;
+                client.UseDefaultCredentials = false;
+                client.Credentials = new NetworkCredential(section.Network.UserName, section.Network.Password);
+                client.EnableSsl = section.Network.EnableSsl;
+
+                // создаем письмо: message.Destination - адрес получателя
+                var mail = new MailMessage(section.From, destinations[0]);
+                if (destinations.Count > 1)
+                {
+                    for (int i = 1; i < destinations.Count; i++)
+                    {
+                        mail.To.Add(destinations[i]);
+                    }
+                }
+
+                mail.Subject = ConfigurationManager.AppSettings["emailSubject"];
+                mail.Body = GetEmailBody(sendingUser.FullName, requestID, description);
+                mail.IsBodyHtml = true;
+                client.Send(mail);
             }
-            // Подключите здесь службу электронной почты для отправки сообщения электронной почты.
-            SmtpSection section = (SmtpSection)ConfigurationManager.GetSection("system.net/mailSettings/smtp");
-
-            SmtpClient client = new SmtpClient(section.Network.Host, section.Network.Port);
-            client.DeliveryMethod = SmtpDeliveryMethod.Network;
-            client.UseDefaultCredentials = false;
-            client.Credentials = new NetworkCredential(section.Network.UserName, section.Network.Password);
-            client.EnableSsl = section.Network.EnableSsl;
-
-            // создаем письмо: message.Destination - адрес получателя
-            var mail = new MailMessage(section.From, destinations[0]);
-            if (destinations.Count > 1)
+            catch (Exception ex)
             {
-                for (int i = 1; i < destinations.Count; i++)
-                {
-                    mail.To.Add(destinations[i]);
-                }
-            }
 
-            mail.Subject = ConfigurationManager.AppSettings["emailSubject"];
-            mail.Body = GetEmailBody(sendingUser.FullName, requestID, description);
-            mail.IsBodyHtml = true;
-            client.Send(mail);
+            }
+           
+        }
+
+        private string GetEmailFromAD(string username)
+        {
+            try
+            {
+                PrincipalContext domainContext = new PrincipalContext(ContextType.Domain, ConfigurationManager.AppSettings["domain"]);
+                UserPrincipal user = UserPrincipal.FindByIdentity(domainContext, username);
+                return user.EmailAddress;
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
         private string GetEmailBody(string fullName, int requestID, string description)
